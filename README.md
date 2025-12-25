@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>琥珀之環：命運重塑 (正式結局版)</title>
+    <style>
+        /* 基礎樣式 */
+        body { background-color: #0d0d0d; color: #d4af37; font-family: "Courier New", "PingFang TC", monospace; display: flex; justify-content: center; padding: 20px; margin: 0; user-select: none; overflow: hidden; }
+        #game-container { width: 1150px; display: none; grid-template-columns: 320px 1fr 280px; gap: 20px; opacity: 0; transition: opacity 2s; }
+        
+        /* 記憶喚醒層 */
+        #pre-intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #pre-text { font-size: 1.5em; margin-bottom: 30px; letter-spacing: 5px; height: 1.5em; color: #d4af37; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+        .truth-btn { background: none; border: 1px solid #d4af37; color: #d4af37; padding: 15px 40px; font-size: 1.2em; cursor: pointer; transition: 0.3s; font-family: inherit; }
+        .truth-btn:hover { background: #d4af37; color: #000; box-shadow: 0 0 20px #d4af37; }
+        #pre-progress { margin-top: 20px; color: #555; font-size: 0.9em; }
+
+        /* --- 新增：結局全螢幕層 --- */
+        #ending-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100000; display: none; flex-direction: column; align-items: center; justify-content: flex-start; overflow: hidden; }
+        .ending-scroll { position: relative; width: 70%; text-align: center; top: 100%; animation: scrollUp 32s linear forwards; }
+        .ending-scroll p { font-size: 1.5em; line-height: 2.8em; margin: 0; }
+        .good-text { color: #d4af37; text-shadow: 0 0 15px rgba(212, 175, 55, 0.6); }
+        .bad-text { color: #ff4444; text-shadow: 0 0 15px rgba(255, 0, 0, 0.6); }
+        .bg-good { background: radial-gradient(circle at center, #1a1000 0%, #000 80%); }
+        .bg-bad { background: radial-gradient(circle at center, #200 0%, #000 80%); }
+
+        /* 測試面板 */
+        #debug-panel { position: fixed; top: 10px; right: 10px; z-index: 100000; background: rgba(50, 0, 0, 0.9); padding: 15px; border: 2px solid #ff4444; border-radius: 8px; box-shadow: 0 0 10px #ff0000; }
+        .debug-btn { display: block; margin-bottom: 8px; padding: 8px 12px; background: #222; color: #fff; cursor: pointer; font-size: 13px; border: 1px solid #666; text-align: center; transition: 0.2s; }
+        .debug-btn:hover { background: #ff4444; color: #000; font-weight: bold; }
+
+        /* 序章與影片 */
+        #intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1a1000 0%, #000 80%); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: flex-start; overflow: hidden; }
+        #intro-content { position: relative; width: 70%; text-align: center; top: 100%; }
+        #intro-content p { font-size: 1.5em; line-height: 2.8em; margin: 0; color: #d4af37; text-shadow: 0 0 15px rgba(212, 175, 55, 0.6); }
+        .start-scroll { animation: scrollUp 28s linear forwards; }
+        @keyframes scrollUp { 0% { top: 100%; opacity: 0; } 5% { opacity: 1; } 95% { opacity: 1; } 100% { top: -160%; opacity: 0; } }
+
+        #video-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 6000; display: none; align-items: center; justify-content: center; }
+        #escape-video { width: 85%; max-width: 1100px; }
+
+        /* 決策彈窗 */
+        #decision-popup { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 9999; display: none; align-items: center; justify-content: center; }
+        .popup-box { border: 2px solid #d4af37; padding: 50px; background: #111; text-align: center; max-width: 500px; box-shadow: 0 0 60px #d4af3777; }
+        .popup-btn { border: 1px solid #d4af37; padding: 12px 40px; cursor: pointer; color: #d4af37; display: inline-block; margin: 15px; font-size: 1.2em; transition: 0.3s; }
+        .popup-btn:hover { background: #d4af37; color: #000; }
+
+        /* 戰鬥畫面 */
+        #combat-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#fff; color:#000; z-index:8000; padding-top:100px; text-align:center; font-family: "Courier New", monospace; }
+        .combat-container { width: 620px; margin: auto; border: 4px solid #000; padding: 30px; background: #fff; box-shadow: 15px 15px 0px #000; position: relative; }
+        .battle-stage { display: flex; justify-content: space-around; align-items: flex-end; height: 160px; margin: 40px 0; position: relative; overflow: visible; }
+        .entity { position: relative; width: 120px; transition: none; }
+        .entity-icon { font-size: 5em; line-height: 1; font-weight: bold; }
+        .hp-label { position: absolute; top: -45px; width: 150px; left: 50%; transform: translateX(-50%); font-weight: 900; font-size: 1.3em; }
+        
+        @keyframes dashP { 0%{transform:translateX(0)} 50%{transform:translateX(150px)} 100%{transform:translateX(0)} }
+        @keyframes dashE { 0%{transform:translateX(0)} 50%{transform:translateX(-150px)} 100%{transform:translateX(0)} }
+        .anim-dash-p { animation: dashP 0.15s ease-in-out; }
+        .anim-dash-e { animation: dashE 0.15s ease-in-out; }
+        .shake-win { animation: vShake 0.3s both; }
+        @keyframes vShake { 0%{transform:translate(0)} 20%{transform:translate(-10px, 10px)} 40%{transform:translate(10px, -10px)} 60%{transform:translate(-10px, -10px)} 80%{transform:translate(10px, 10px)} 100%{transform:translate(0)} }
+
+        .skill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .skill-box { border: 2px solid #000; padding: 15px; cursor: pointer; position: relative; overflow: hidden; font-weight: 900; background: #fff; user-select: none; }
+        .skill-fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: rgba(0,0,0,0.2); z-index: 0; transition: width 0.05s linear; }
+        .skill-text { position: relative; z-index: 1; }
+
+        /* UI 元件 */
+        #notifications { height: 600px; overflow-y: hidden; border-right: 1px solid #333; padding-right: 15px; display: flex; flex-direction: column-reverse; font-size: 0.85em; }
+        .btn-box { position: relative; border: 1px solid #d4af37; height: 42px; margin-bottom: 12px; cursor: pointer; overflow: hidden; background: #000; }
+        .btn-text { position: absolute; width: 100%; text-align: center; line-height: 42px; z-index: 5; }
+        .btn-cd-bar { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: rgba(212, 175, 55, 0.25); z-index: 1; }
+        .btn-box.disabled { border-color: #444; color: #444; cursor: not-allowed; }
+        #mgmt-panel, #merchant-panel, #lab-panel { display: none; margin-top: 20px; border: 1px dashed #555; padding: 15px; background: #111; }
+        .worker-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        #map-screen { display: none; background: #000; padding: 20px; border: 1px solid #444; font-size: 18px; line-height: 20px; letter-spacing: 5px; }
+        
+        .boss-icon { color: #ff0000; font-weight: 900; text-shadow: 0 0 5px red; animation: pulse 1s infinite alternate; }
+        @keyframes pulse { from{opacity:0.6} to{opacity:1} }
+
+        #stats { border-left: 1px solid #333; padding-left: 15px; }
+        .res-item { margin-bottom: 15px; font-size: 0.95em; }
+    </style>
+</head>
+<body>
+
+<div id="pre-intro-overlay">
+    <div id="pre-text">意識彌散中...</div>
+    <button class="truth-btn" onclick="initialExplore()">探索真相</button>
+    <div id="pre-progress">0%</div>
+</div>
+
+<div id="ending-overlay">
+    <div id="ending-content" class="ending-scroll"></div>
+</div>
+
+<div id="debug-panel">
+    <div style="color:#ff4444; font-weight:bold; margin-bottom:10px; text-align:center; border-bottom:1px solid #555; padding-bottom:5px;">🛠️ 測試控制台</div>
+    <div class="debug-btn" onclick="debugSkipIntro()">⏩ 跳過序章</div>
+    <div class="debug-btn" onclick="debugMaxRes()">💰 資源全滿</div>
+</div>
+
+<div id="intro-overlay">
+    <div id="intro-content">
+        <p>序·琥珀之環——</p>
+        <p>傳說，世界有七環...</p>
+        <p>「若真相被囚於琥珀，那麼，誰還敢伸手去觸碰光？」</p>
+    </div>
+</div>
+
+<div id="video-overlay"><video id="escape-video" src="逃亡者誓言揭露真相.mp4"></video></div>
+
+<div id="decision-popup">
+    <div class="popup-box">
+        <h2 style="color:#fff">命運抉擇</h2>
+        <p>是否繼續探索第八環？</p>
+        <div style="margin-top:30px;">
+            <div class="popup-btn" onclick="applyDecision(true)">是</div>
+            <div class="popup-btn" onclick="applyDecision(false)">否</div>
+        </div>
+    </div>
+</div>
+
+<div id="game-container">
+    <div id="notifications"></div>
+    <div id="main-interface">
+        <h2 id="loc-name">琥珀之湖</h2>
+        <div id="loc-desc">希恩，阿斯凱爾大陸的魔法學徒。</div><br>
+        <div id="action-list">
+            <div class="btn-box" id="btn-meditate" onclick="meditate()"><div class="btn-cd-bar"></div><div class="btn-text">探索真相</div></div>
+        </div>
+
+        <div id="mgmt-panel">
+            <h3>隱秘據點管理</h3>
+            <p>倖存者: <span id="idle-surv">0</span> / <span id="total-surv">0</span></p>
+            <div class="worker-row"><span>屏障維護員 (產出魔力)</span><div><button onclick="assign('guardian',-1)">-</button> <span id="w-guard">0</span> <button onclick="assign('guardian',1)">+</button></div></div>
+            <div class="worker-row"><span>魔法能量研究員 (產出能量)</span><div><button onclick="assign('historian',-1)">-</button> <span id="w-hist">0</span> <button onclick="assign('historian',1)">+</button></div></div>
+            <div id="lab-workers" style="display:none;" class="worker-row">
+                <span>時空研究員 (產出原料)</span>
+                <div><button onclick="assign('time',-1)">-</button> <span id="w-time">0</span> <button onclick="assign('time',1)">+</button></div>
+            </div>
+        </div>
+        <div id="merchant-panel"><h3 style="color:#00eeff">黑市交易 (依人數解鎖)</h3><div id="shop-list"></div></div>
+    </div>
+    <div id="map-screen">
+        <div class="btn-box" onclick="toggleMap()" style="width: 150px;"><div class="btn-text">返回據點</div></div>
+        <div id="map-grid"></div>
+    </div>
+    <div id="stats">
+        <div class="res-item" style="color:#00eeff">倖存者 (閒/總): <span id="res-surv-info">0 / 0</span></div>
+        <div class="res-item">真相程度: <span id="res-truth">0</span>%</div>
+        <div class="res-item">生命值: <span id="res-hp">100</span> / 100</div>
+        <div class="res-item">魔力池: <span id="res-mana">50</span></div>
+        <div class="res-item">能量點: <span id="res-energy">0</span></div>
+        <div class="res-item" id="threat-box" style="display:none; color:#ff4444;">議會追捕: <span id="res-threat">0</span>%</div>
+        <hr style="border:0.5px solid #333">
+        <div class="res-item" id="raw-box" style="display:none;">時空原料: <span id="res-raw">0</span> / 10</div>
+        <div class="res-item" id="stone-box" style="display:none; color:#ffcc00;">時間之石: <span id="res-stones">0</span> / 1</div>
+        <br><div style="font-size:0.8em; color:#888;">掌握魔法: <br><span id="known-skills" style="color:#eee">拳擊</span></div>
+    </div>
+</div>
+
+<div id="combat-overlay">
+    <div class="combat-container" id="combat-box">
+        <div id="combat-title" style="font-weight:900; font-size:1.2em; border-bottom:2px solid #000;">COMBAT</div>
+        <div id="combat-log" style="height:35px; margin-top:5px;">敵方威脅接近...</div>
+        <div class="battle-stage">
+            <div class="entity" id="p-sprite"><div class="hp-label" id="p-hp-label">100/100</div><div class="entity-icon">@</div></div>
+            <div class="entity" id="e-sprite"><div class="hp-label" id="e-hp-label">60/60</div><div class="entity-icon" id="e-icon">E</div></div>
+        </div>
+        <div style="font-size:0.7em; text-align:left;">敵人進度:</div>
+        <div style="background:#eee; height:8px; margin-bottom:20px; border:1px solid #000;"><div id="e-atk-bar" style="height:100%; background:#000; width:0%;"></div></div>
+        <div class="skill-grid" id="combat-skills"></div>
+    </div>
+</div>
+
+<script>
+    // --- 記憶喚醒系統 ---
+    let initialTruth = 0;
+    const preTexts = ["破碎的記憶...", "看見了湖泊...", "議會的陰影...", "我想起來了。"];
+    
+    function initialExplore() {
+        if (initialTruth >= 100) return;
+        initialTruth += 25;
+        document.getElementById('pre-progress').innerText = initialTruth + "%";
+        document.getElementById('pre-text').innerText = preTexts[Math.floor(initialTruth/25) - 1];
+        if (initialTruth >= 100) {
+            setTimeout(() => {
+                document.getElementById('pre-intro-overlay').style.display = 'none';
+                startOriginalIntro();
+            }, 800);
+        }
+    }
+
+    function startOriginalIntro() {
+        document.getElementById('intro-overlay').style.display = 'flex';
+        document.getElementById('intro-content').classList.add('start-scroll');
+        setTimeout(() => {
+            if(document.getElementById('intro-overlay').style.display !== 'none') {
+                document.getElementById('intro-overlay').style.display = 'none';
+                document.getElementById('game-container').style.display = 'grid';
+                setTimeout(() => { document.getElementById('game-container').style.opacity = '1'; }, 100);
+                updateUI();
+            }
+        }, 28000);
+    }
+
+    // --- 核心遊戲數據 ---
+    let G = {
+        truth: 0, mana: 50, energy: 0, water: 50, threat: 0,
+        surv: 0, workers: { historian: 0, guardian: 0, time: 0 },
+        isEscaped: false, hasLab: false, stoneRaw: 0, stones: 0, 
+        usedStone: false, // <-- 新增：用來追蹤是否使用過捷徑
+        threatHidden: false, videoPlayed: false,
+        skills: [{id:'punch', name:'拳擊', pow:10, cd:1500, cost:0}],
+        shop: [
+            {id:'fire', name:'一環：炊炎', pow:30, cd:3000, cost:10, price:60, reqSurv: 0},
+            {id:'water', name:'二環：潮語', pow:45, cd:4000, cost:15, price:150, reqSurv: 0},
+            {id:'earth', name:'三環：岩破', pow:65, cd:5000, cost:20, price:300, reqSurv: 10},
+            {id:'wind', name:'四環：風切', pow:85, cd:4500, cost:25, price:500, reqSurv: 15},
+            {id:'thunder', name:'五環：雷鳴', pow:110, cd:5500, cost:30, price:800, reqSurv: 20},
+            {id:'ice', name:'六環：冰封', pow:140, cd:6000, cost:35, price:1200, reqSurv: 25},
+            {id:'light', name:'七環：聖裁', pow:180, cd:7000, cost:40, price:1800, reqSurv: 30},
+            {id:'rewrite', name:'八環：改寫', pow:250, cd:8000, cost:80, price:3500, reqSurv: 35}
+        ],
+        map: [], explored: [], px: 15, py: 7, mapActive: false, cooldowns: {}
+    };
+
+    const ENEMIES = {
+        'scout': { name: '議會斥候', hp: 50, max: 50, dmg: 8, speed: 1800, icon: 's' },
+        'boss':  { name: '議會長(Z)', hp: 600, max: 600, dmg: 50, speed: 2500, icon: 'Z' }
+    };
+
+    function log(m, t='') { const e = document.createElement('div'); e.className = 'log-entry ' + t; e.innerText = m; document.getElementById('notifications').prepend(e); }
+
+    function updateUI() {
+        let allocated = G.workers.historian + G.workers.guardian + G.workers.time;
+        let idle = Math.max(0, G.surv - allocated);
+        document.getElementById('res-truth').innerText = Math.floor(G.truth);
+        document.getElementById('res-mana').innerText = Math.floor(G.mana);
+        document.getElementById('res-energy').innerText = Math.floor(G.energy);
+        document.getElementById('res-threat').innerText = Math.floor(G.threat);
+        document.getElementById('total-surv').innerText = G.surv;
+        document.getElementById('idle-surv').innerText = idle;
+        document.getElementById('res-surv-info').innerText = `${idle} / ${G.surv}`;
+        document.getElementById('w-hist').innerText = G.workers.historian;
+        document.getElementById('w-guard').innerText = G.workers.guardian;
+        document.getElementById('w-time').innerText = G.workers.time;
+        document.getElementById('res-raw').innerText = Math.floor(G.stoneRaw);
+        document.getElementById('res-stones').innerText = G.stones;
+        document.getElementById('known-skills').innerText = G.skills.map(s=>s.name).join(", ");
+        if(G.threatHidden) document.getElementById('threat-box').style.display='none';
+        
+        if (G.hasLab) {
+            document.getElementById('lab-workers').style.display='flex';
+            document.getElementById('raw-box').style.display='block';
+            document.getElementById('stone-box').style.display='block';
+        } else if (G.surv >= 10 && !document.getElementById('btn-build-lab')) {
+            const b = document.createElement('div'); b.className = 'btn-box'; b.id = 'btn-build-lab';
+            b.onclick = function() { if(G.energy >= 400){ G.energy -= 400; G.hasLab=true; log("實驗室落成。", "highlight"); document.getElementById('btn-build-lab').remove(); updateUI(); } };
+            b.innerHTML = '<div class="btn-text">建造魔法實驗室 (400能量)</div>';
+            document.getElementById('action-list').appendChild(b);
+        }
+
+        if (G.stones > 0 && !document.getElementById('btn-use-stone')) {
+            const b = document.createElement('div'); b.className = 'btn-box'; b.id = 'btn-use-stone';
+            b.onclick = function() { 
+                G.stones = 0; G.threat = 0; G.videoPlayed = false;
+                G.usedStone = true; // <-- 關鍵：一旦使用，命運改變
+                log("重塑因果：回歸命運抉擇。", "highlight"); 
+                document.getElementById('decision-popup').style.display = 'flex'; 
+                updateUI(); 
+                if(document.getElementById('btn-use-stone')) document.getElementById('btn-use-stone').remove(); 
+            };
+            b.innerHTML = '<div class="btn-text" style="color:#ffcc00">使用時間之石</div>';
+            document.getElementById('action-list').appendChild(b);
+        }
+
+        const sl = document.getElementById('shop-list'); sl.innerHTML = "";
+        if(G.isEscaped || G.truth >= 100) {
+            G.shop.forEach(s => { 
+                if(G.surv >= s.reqSurv && !G.skills.find(k=>k.id===s.id)) {
+                    sl.innerHTML += `<div class="mini-btn" style="border:1px solid #d4af37; padding:15px; margin:10px 0; cursor:pointer; text-align:center;" onclick="buySkill('${s.id}')">${s.name} (${s.price}能量)</div>`; 
+                }
+            }); 
+        }
+    }
+
+    function startCD(id, dur, cb) {
+        if (G.cooldowns[id]) return; G.cooldowns[id]=true;
+        const btn = document.getElementById(id); const bar = btn.querySelector('.btn-cd-bar'); btn.classList.add('disabled');
+        let s = Date.now(); let t = setInterval(()=>{ let el = Date.now()-s; let p = Math.min((el/dur)*100, 100); if(bar) bar.style.width=p+"%"; if(el>=dur){ clearInterval(t); G.cooldowns[id]=false; btn.classList.remove('disabled'); if(bar) bar.style.width="0%"; cb(); } },30);
+    }
+
+    function meditate() { startCD('btn-meditate', 2000, () => { G.truth += 25; log("正在探索記憶..."); if(G.truth >= 100) unlockBase(); updateUI(); }); }
+    function unlockBase() { 
+        G.truth=100; if(G.surv < 5) G.surv = 5;
+        document.getElementById('loc-name').innerText="秘密據點"; document.getElementById('mgmt-panel').style.display='block'; document.getElementById('threat-box').style.display='block'; 
+        document.getElementById('action-list').innerHTML=`<div class="btn-box" id="btn-scout" onclick="scout()"><div class="btn-cd-bar"></div><div class="btn-text">搜尋倖存者 (20魔力)</div></div><div class="btn-box" id="btn-train" onclick="train()"><div class="btn-cd-bar"></div><div class="btn-text">修練魔法 (獲取能量)</div></div>`; 
+        setInterval(resourceTick, 2000); updateUI(); 
+    }
+    
+    function scout() { if(G.mana < 20) return; startCD('btn-scout', 5000, () => { G.mana-=20; G.surv+=1; log(`找到 1 位倖存者。`); updateUI(); }); }
+    function train() { 
+        if (G.cooldowns['btn-train']) return;
+        if(!G.threatHidden) { G.threat += 10; log("修練引起議會注意！", "danger"); updateUI(); }
+        startCD('btn-train', 3000, () => { G.energy+=25; if(G.threat >= 100) triggerEscapeVideo(); updateUI(); }); 
+    }
+
+    function triggerEscapeVideo() {
+        if(G.videoPlayed) return;
+        G.videoPlayed = true; 
+        document.getElementById('game-container').style.opacity='0';
+        const ov=document.getElementById('video-overlay'); const v=document.getElementById('escape-video');
+        setTimeout(() => {
+            document.getElementById('game-container').style.display='none'; ov.style.display='flex'; 
+            v.play(); v.onended = () => { ov.style.display='none'; document.getElementById('decision-popup').style.display='flex'; };
+        }, 1500);
+    }
+
+    function applyDecision(explore) {
+        document.getElementById('decision-popup').style.display='none';
+        const game = document.getElementById('game-container'); game.style.display='grid'; setTimeout(()=>game.style.opacity='1', 100);
+        if(explore) { log("命運抉擇：前往未知。", "danger"); G.isEscaped = true; G.threatHidden = true;
+            if(!document.getElementById('btn-map-toggle')) { const b=document.createElement('div'); b.className='btn-box'; b.id='btn-map-toggle'; b.onclick=toggleMap; b.innerHTML='<div class="btn-text">進入地圖探索</div>'; document.getElementById('action-list').appendChild(b); }
+            document.getElementById('merchant-panel').style.display='block'; initMap();
+        } else { log("命運抉擇：潛伏黑暗。"); G.threat = 0; G.isEscaped = true; }
+        updateUI();
+    }
+
+    // --- 戰鬥系統 ---
+    let CB = { active:false, cur:null, php:100, et:null, cds:{} };
+    function startCombat(typeKey) {
+        let proto = ENEMIES[typeKey]; CB.cur = { name:proto.name, hp:proto.hp, max:proto.max, dmg:proto.dmg, speed:proto.speed, icon:proto.icon }; 
+        CB.active = true; CB.php = 100;
+        document.getElementById('combat-overlay').style.display='block'; 
+        document.getElementById('combat-title').innerText = CB.cur.name; 
+        document.getElementById('e-icon').innerText = CB.cur.icon;
+        renderCombatUI(); let s=Date.now();
+        CB.et = setInterval(() => { if(!CB.active) return; let el=Date.now()-s; document.getElementById('e-atk-bar').style.width = Math.min((el/CB.cur.speed)*100, 100)+"%"; if(el >= CB.cur.speed){ const es=document.getElementById('e-sprite'); es.classList.remove('anim-dash-e'); void es.offsetWidth; es.classList.add('anim-dash-e'); setTimeout(() => applyDamage('player', CB.cur.dmg), 100); s=Date.now(); } }, 50);
+    }
+
+    // --- 核心變動：結局判斷函數 ---
+    function triggerEnding() {
+        const overlay = document.getElementById('ending-overlay');
+        const content = document.getElementById('ending-content');
+        document.getElementById('game-container').style.display = 'none';
+        overlay.style.display = 'flex';
+        
+        if (G.usedStone) {
+            // 壞結局
+            overlay.className = 'bg-bad';
+            content.innerHTML = `
+                <p class="bad-text">【混亂之源：因果崩潰】</p>
+                <p class="bad-text">希恩倒在議會長的屍骸前，但他的體內早已破碎不堪。</p>
+                <p class="bad-text">因為曾經動用過「時間之石」強行扭轉因果，命運早已千瘡百孔。</p>
+                <p class="bad-text">希恩被禁忌的八環力量徹底吞噬，魔法的力量超出了控制範圍。</p>
+                <p class="bad-text">世界陷入了無法修復的混亂，空間在哀鳴中坍塌。</p>
+                <p class="bad-text">希恩和他所愛的一切都在災難中消失殆盡，只剩無盡的虛無。</p>
+            `;
+        } else {
+            // 好結局
+            overlay.className = 'bg-good';
+            content.innerHTML = `
+                <p class="good-text">【真理之冠：自由新世】</p>
+                <p class="good-text">議會長的權杖應聲而碎，舊世界的枷鎖隨之崩解。</p>
+                <p class="good-text">希恩成功揭開了第八環的真相——那是被埋沒的、屬於人的意志。</p>
+                <p class="good-text">希恩運用第八環的力量打破了秩序社會長久以來的禁錮。</p>
+                <p class="good-text">他最終選擇開放第八環給所有人，推翻了謊言交織的舊體制。</p>
+                <p class="good-text">建立了一個基於自由與真相的新世界。</p>
+                <p class="good-text">希恩，成為了這個新時代的領袖，守護著重生的真理。</p>
+            `;
+        }
+        content.classList.add('ending-scroll');
+    }
+
+    function finalize(win) { 
+        clearInterval(CB.et); 
+        CB.active=false; 
+        setTimeout(() => { 
+            document.getElementById('combat-overlay').style.display='none'; 
+            if(win){ 
+                // 打贏的是魔王 Z
+                if (CB.cur.icon === 'Z') {
+                    triggerEnding();
+                    return;
+                }
+                G.energy += 50; G.map[G.py][G.px] = '.'; log("戰鬥勝利！");
+            } else { 
+                repatriate(); 
+            } 
+            if(G.mapActive) drawMap(); 
+        }, 1000); 
+    }
+
+    function applyDamage(target, amt) { const box = document.getElementById('combat-box'); box.classList.remove('shake-win'); void box.offsetWidth; box.classList.add('shake-win'); if(target==='enemy') { CB.cur.hp -= amt; if(CB.cur.hp <= 0) finalize(true); } else { CB.php -= amt; if(CB.php <= 0) finalize(false); } updateCombatStats(); }
+    function playerAtk(id) {
+        if(CB.cds[id] || !CB.active) return; let s = G.skills.find(k=>k.id===id); if(G.mana < s.cost) return;
+        const ps=document.getElementById('p-sprite'); ps.classList.remove('anim-dash-p'); void ps.offsetWidth; ps.classList.add('anim-dash-p');
+        setTimeout(() => { G.mana-=s.cost; applyDamage('enemy', s.pow); }, 100);
+        CB.cds[id]=true; let st=Date.now(); let t=setInterval(()=>{ let el = Date.now()-st; let fill = document.getElementById(`cb-${id}`).querySelector('.skill-fill'); fill.style.width=Math.min((el/s.cd)*100,100)+"%"; if(el>=s.cd){ clearInterval(t); CB.cds[id]=false; fill.style.width="0%"; } },50); updateUI();
+    }
+    function updateCombatStats() { document.getElementById('p-hp-label').innerText=`${CB.php}/100`; document.getElementById('e-hp-label').innerText=`${CB.cur.hp}/${CB.cur.max}`; }
+    function renderCombatUI() { updateCombatStats(); const b=document.getElementById('combat-skills'); b.innerHTML=""; G.skills.forEach(s=>{ b.innerHTML+=`<div class="skill-box" id="cb-${s.id}" onclick="playerAtk('${s.id}')"><div class="skill-fill"></div><div class="skill-text">${s.name}</div></div>`; }); }
+
+    // --- 地圖與其他功能 ---
+    function toggleMap() { G.mapActive=!G.mapActive; document.getElementById('map-screen').style.display=G.mapActive?'block':'none'; document.getElementById('main-interface').style.display=G.mapActive?'none':'block'; if(G.mapActive) drawMap(); }
+    function initMap() { for(let i=0;i<15;i++){ G.map[i]=[]; G.explored[i]=[]; for(let j=0;j<30;j++){ let r=Math.random(); G.map[i][j]=(r>0.96)?'W':(r>0.92)?'E':'.'; G.explored[i][j]=false; } } G.map[7][15]='H'; G.map[2][2]='Z'; reveal(15,7); }
+    function reveal(x,y){ for(let i=y-2;i<=y+2;i++) for(let j=x-2;j<=x+2;j++) if(G.explored[i] && G.explored[i][j]!==undefined) G.explored[i][j]=true; }
+    function drawMap() { let h=""; for(let i=0;i<15;i++){ let r=""; for(let j=0;j<30;j++){ if(i===G.py && j===G.px) r+='<span style="color:#fff;font-weight:900">@</span>'; else if(G.explored[i][j]) { if(G.map[i][j] === 'Z') r+='<span class="boss-icon">Z</span>'; else r+=G.map[i][j]; } else r+='<span style="color:#222">?</span>'; } h+=`<div>${r}</div>`; } document.getElementById('map-grid').innerHTML=h; }
+    window.onkeydown=(e)=>{ if(!G.mapActive || CB.active) return; let dx=0,dy=0; if(e.key==='w')dy=-1; if(e.key==='s')dy=1; if(e.key==='a')dx=-1; if(e.key==='d')dx=1; if(dx!==0||dy!==0){ if(G.mana<=0)return repatriate(); G.px+=dx; G.py+=dy; G.mana--; reveal(G.px,G.py); let c=G.map[G.py][G.px]; if(c==='W'){ G.mana+=40; G.map[G.py][G.px]='.'; } if(c==='E') startCombat('scout'); if(c==='Z') startCombat('boss'); drawMap(); updateUI(); } };
+    function repatriate(){ log("撤回據點。", "danger"); G.px=15; G.py=7; G.mana=Math.max(G.mana, 20); toggleMap(); updateUI(); }
+    function resourceTick() { G.mana += G.workers.guardian * 5; G.energy += G.workers.historian * 4; if(G.hasLab && G.stones < 1) { G.stoneRaw += G.workers.time * 0.1; if(G.stoneRaw >= 10){ G.stoneRaw = 0; G.stones = 1; log("提煉出時間之石。"); } } updateUI(); }
+    function assign(j, a) { let allocated = G.workers.historian + G.workers.guardian + G.workers.time; if(a>0 && allocated < G.surv) G.workers[j]++; else if(a<0 && G.workers[j]>0) G.workers[j]--; updateUI(); }
+    function buySkill(id){ let s=G.shop.find(k=>k.id===id); if(G.energy>=s.price){ G.energy-=s.price; G.skills.push(s); log(`習得 ${s.name}。`); updateUI(); } }
+    function debugSkipIntro() { document.getElementById('pre-intro-overlay').style.display='none'; document.getElementById('intro-overlay').style.display='none'; G.truth=100; G.surv=5; unlockBase(); enterGame(); }
+    function enterGame() { document.getElementById('game-container').style.display='grid'; setTimeout(()=>document.getElementById('game-container').style.opacity='1',100); }
+    function debugMaxRes() { G.surv=40; G.energy=5000; updateUI(); }
+    updateUI();
+</script>
+</body>
+</html>
